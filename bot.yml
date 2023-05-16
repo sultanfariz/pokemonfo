@@ -1,0 +1,211 @@
+id: 0e65e2ac-35f2-49e5-9d74-c5e90ba4e7c8
+revision: bf5fe6537ab0aca32e1e898aceada780e525ecf7
+name: pokemonfo_chatbot
+tag: latest
+deleted_at: null
+desc: 'Regular chatbot with knowledges about pokemon information'
+timezone: 7
+flows:
+    default:
+        active: true
+        fallback: true
+        intents:
+            defaultIntent:
+                type: text
+                initial: false
+                fallback: true
+        states:
+            init:
+                transitions:
+                    init:
+                        fallback: true
+                action: sayDontUnderstand
+                initial: true
+                end: true
+        actions:
+            sayDontUnderstand:
+                type: text
+                options:
+                    text: 'Maaf saya belum mengerti :('
+        methods: {}
+    pokemonBot:
+        active: true
+        volatile: true
+        intents:
+            helloIntent:
+                type: text
+                initial: true
+                fallback: false
+                condition: 'content == "Hello" || content == "/start"'
+            nameIntent:
+                type: text
+                initial: false
+                fallback: false
+                classifier:
+                    nlu: supermodel
+                    match: person
+                    options:
+                        labels: true
+                attributes:
+                    name:
+                        nlu: supermodel
+                        path: person
+            reenter:
+                type: command
+                initial: false
+                fallback: false
+                condition: 'content == "reenter"'
+            pokeIntent:
+                type: text
+                initial: false
+                fallback: false
+                classifier:
+                    nlu: pokemonInfo
+            pokemonInputIntent:
+                type: text
+                initial: false
+                fallback: false
+                classifier:
+                    nlu: pokemonName
+        states:
+            init:
+                transitions:
+                    nameInput:
+                        condition: 'intent == "helloIntent"'
+                action: commandInfo
+                initial: true
+            hello:
+                transitions:
+                    askPoke:
+                        condition: 'intent == "pokeIntent"'
+                    hello:
+                        fallback: true
+                action:
+                    -
+                        name: hello
+                    -
+                        name: commandInfo
+                    -
+                        name: postUserName
+                end: false
+            nameInput:
+                transitions:
+                    hello:
+                        fallback: false
+                        condition: 'intent == "nameIntent"'
+                        mapping:
+                            context.name: content
+                action: nameInput
+            askPoke:
+                transitions:
+                    pokeInput:
+                        fallback: true
+                        condition: 'intent == "pokemonInputIntent"'
+                        mapping:
+                            context.pokemon: content
+                    pokeNotFound:
+                        fallback: true
+                        condition: 'intent != "pokemonInputIntent" && intent != "pokeIntent" && intent != "helloIntent"'
+                        mapping:
+                            context.pokemon: content
+                action: askPoke
+            pokeInput:
+                transitions:
+                    askPoke: {}
+                action:
+                    -
+                        name: getPokeAPI
+                    -
+                        name: pokeGetInfo
+                    -
+                        name: pokePict
+                end: false
+            pokeNotFound:
+                transitions:
+                    askPoke:
+                        fallback: true
+                action: notFound
+        actions:
+            hello:
+                type: text
+                options:
+                    text: 'Welcome $(context.name), this is a bot to search about ur favorite pokemon.'
+            nameInput:
+                type: text
+                options:
+                    text: 'Hi, what is your name?'
+            commandInfo:
+                type: text
+                options:
+                    text: 'You can send ''Pokemon information'' to get information about a Pokemon.'
+            askPoke:
+                type: text
+                options:
+                    text: 'Which Pokemon do you need the info for?'
+            getPokeAPI:
+                type: api
+                options:
+                    text:
+                        - 'Welcome $(context.name), this is a bot to search about ur favorite pokemon.'
+                    uri: 'https://pokeapi.co/api/v2/pokemon/$(context.pokemon)/'
+                    method: GET
+                    body:
+                        status: open
+                    headers:
+                        api_access_token: $(metadata.token)
+            pokeGetInfo:
+                type: text
+                options:
+                    text: '$(result.name) is an <$(result.types[0].type.name)> type Pokemon with $(result.weight) weight and $(result.height) height, here is a picture of $(result.name).'
+            pokePict:
+                type: template
+                options:
+                    type: image
+                    items:
+                        originalContentUrl: $(result.sprites.front_default)
+                        previewImageUrl: $(result.sprites.front_default)
+                        caption: $(result.name)
+            notFound:
+                type: text
+                options:
+                    text: 'Sorry we don''t have information for <$(context.pokemon)>.'
+            postUserName:
+                type: api
+                options:
+                    uri: 'http://185.208.207.157/api/users'
+                    method: POST
+                    body:
+                        name: $(context.name)
+        methods: {}
+nlus:
+    supermodel:
+        type: nl
+        options:
+            nluId: 'sultanfariz:pokemonfo_chatbot'
+            threshold: 0.8
+            output: phrase
+            entity: kata
+    pokemonInfo:
+        type: keyword
+        options:
+            keywords:
+                Pokemon:
+                    - 'Pokemon information'
+                    - 'pokemon info'
+                    - pokemon
+                    - poke
+    pokemonName:
+        type: keyword
+        options:
+            keywords:
+                pokemon:
+                    - pikachu
+                    - ' 1'
+                    - bulbasaur
+                    - '2'
+                    - ditto
+                    - '3'
+                    - '23'
+                    - charmander
+methods: {}
+config: {}
