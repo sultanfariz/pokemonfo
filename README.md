@@ -33,16 +33,10 @@ Open the `config.js` file located in the project root directory.
 Replace the database configuration values with your own database connection details:
 
 ```javascript
-module.exports = {
-  database: {
-    host: '<database_host>',
-    port: '<database_port>',
-    user: '<database_user>',
-    password: '<database_password>',
-    name: '<database_name>'
-  },
-  // Other configurations...
-};
+const sequelize = new Sequelize('<database_name>', '<database_user>', '<database_password>', {
+  host: '<database_host>',
+  dialect: 'mysql',
+});
 ```
 Save the changes.
 
